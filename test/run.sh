@@ -1,0 +1,1 @@
+pio test --without-uploading -c test/platformio.ini ${@--e native} -vvv

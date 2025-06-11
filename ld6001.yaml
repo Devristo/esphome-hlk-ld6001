@@ -1,0 +1,292 @@
+esphome:
+  name: "hlk-ld6001"
+  friendly_name: "Hilink HLK-LD6001 mmWave sensor"
+  platformio_options:
+    build_flags: "-std=gnu++17"
+    build_unflags: "-std=gnu++11"
+    # board_build.arduino.memory_type: qio_opi
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+# psram:
+#   mode: octal
+#   speed: 80MHz
+
+# Enable logging
+logger:
+  level: WARN
+
+# Enable Home Assistant API
+api:
+
+ota:
+  - platform: esphome
+    id: ota_esphome
+
+captive_portal:
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+web_server:
+  port: 80
+
+# light:
+#   - platform: status_led
+#     name: ESP32 LED
+#     pin: GPIO35
+#     internal: False
+#     restore_mode: ALWAYS_OFF
+
+button:
+  - platform: restart
+    icon: mdi:power-cycle
+    name: "ESP Reboot"
+
+external_components:
+  # use all components from a local folder
+  - source:
+      type: local
+      path: ./esphome/components
+    refresh: '0s'
+
+font:
+  - file: "fonts/AdwaitaMono-Regular.ttf"
+    id: font_small
+    size: 16
+#esp32_camera:
+##  resolution: "FHD"
+#  external_clock:
+#    pin: GPIO15
+#    frequency: 20MHz
+#  i2c_pins:
+#    sda: GPIO4
+#    scl: GPIO5
+#  data_pins: [GPIO11, GPIO9, GPIO8, GPIO10, GPIO12, GPIO18, GPIO17, GPIO16]
+#  vsync_pin: GPIO6
+#  href_pin: GPIO7
+#  pixel_clock_pin: GPIO13
+#
+#  # Image settings
+#  name: ESP32-CAM
+
+
+uart:
+  id: uart_2
+  tx_pin: GPIO2
+  rx_pin: GPIO1
+  baud_rate: 9600
+#  port: '/dev/ttyUSB0'
+  parity: EVEN
+  stop_bits: 1
+  data_bits: 8
+
+mqtt:
+  id: mqtt_client
+  enable_on_boot: true
+  broker: !secret mqtt_broker
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  log_topic: null
+  # idf_send_async: true
+
+ld6001:
+  id: ld6001_radar
+  throttle: 1000ms
+  uart_id: uart_2
+  update_interval: 500ms
+
+i2c:
+  sda: GPIO38
+  scl: GPIO39
+  scan: true
+  id: bus_a
+
+sensor:
+  - platform: ld6001
+    ld6001_id: ld6001_radar
+    target_count:
+      name: Presence Target Count
+    target_1:
+      x:
+        name: Target-1 X
+      y:
+        name: Target-1 Y
+      pitch_angle:
+        name: Target-1 Pitch Angle
+      horizontal_angle:
+        name: Target-1 Horizontal Angle
+      distance:
+        name: Target-1 Distance
+    target_2:
+      x:
+        name: Target-2 X
+      y:
+        name: Target-2 Y
+      pitch_angle:
+        name: Target-2 Pitch Angle
+      horizontal_angle:
+        name: Target-2 Horizontal Angle
+      distance:
+        name: Target-2 Distance
+    zone_1:
+      target_count:
+        name: Zone-1 Target Count
+    zone_2:
+      target_count:
+        name: Zone-2 Target Count
+    zone_3:
+      target_count:
+        name: Zone-3 Target Count
+    zone_4:
+      target_count:
+        name: Zone-4 Target Count
+  - platform: mpu6886
+    address: 0x68
+    update_interval: 1s
+    accel_x:
+      name: "MPU6886 Accel X"
+      id: accel_x
+    accel_y:
+      name: "MPU6886 Accel Y"
+      id: accel_y
+    accel_z:
+      name: "MPU6886 Accel z"
+      id: accel_z
+    gyro_x:
+      name: "MPU6886 Gyro X"
+    gyro_y:
+      name: "MPU6886 Gyro Y"
+    gyro_z:
+      name: "MPU6886 Gyro z"
+    temperature:
+      name: "MPU6886 Temperature"
+  - platform: template
+    name: "Wall Pitch"
+    id: wall_pitch
+    update_interval: 1s
+    unit_of_measurement: "°"
+    lambda: |-
+      return atan2(id(accel_z).state, sqrt(pow(id(accel_x).state, 2) + pow(id(accel_y).state, 2))) * 180.0 / PI;
+
+  - platform: template
+    name: "Wall Roll"
+    id: wall_roll
+    update_interval: 1s
+    unit_of_measurement: "°"
+    lambda: |-
+      return atan2(id(accel_y).state, id(accel_x).state) * 180.0 / PI;
+
+text_sensor:
+  - platform: ld6001
+    ld6001_id: ld6001_radar
+    version:
+      name: Version
+
+number:
+  - platform: ld6001
+    ld6001_id: ld6001_radar
+    zone_1:
+      x1:
+        name: Zone-1 X1
+      y1:
+        name: Zone-1 Y1
+      x2:
+        name: Zone-1 X2
+      y2:
+        name: Zone-1 Y2
+    zone_2:
+      x1:
+        name: Zone-2 X1
+      y1:
+        name: Zone-2 Y1
+      x2:
+        name: Zone-2 X2
+      y2:
+        name: Zone-2 Y2
+    zone_3:
+      x1:
+        name: Zone-3 X1
+      y1:
+        name: Zone-3 Y1
+      x2:
+        name: Zone-3 X2
+      y2:
+        name: Zone-3 Y2
+    zone_4:
+      x1:
+        name: Zone-4 X1
+      y1:
+        name: Zone-4 Y1
+      x2:
+        name: Zone-4 X2
+      y2:
+        name: Zone-4 Y2
+  
+spi:
+  clk_pin: GPIO17
+  mosi_pin: GPIO21
+
+output:
+  - id: backlight_output
+    platform: ledc
+    frequency: 500Hz
+    pin: 16
+    min_power: 0.3
+    max_power: 1
+    zero_means_zero: true
+
+light:
+  - output: backlight_output
+    id: backlight
+    name: Backlight
+    platform: monochromatic
+    icon: mdi:brightness-7
+    restore_mode: ALWAYS_ON
+
+color:
+  - id: my_red
+    red: 100%
+    green: 3%
+    blue: 5%
+  - id: my_green
+    green: 100%
+    blue: 3%
+    red: 5%
+  - id: white
+    green: 100%
+    blue: 100%
+    red: 100%
+
+display:
+  - id: lcd_display
+    platform: ili9xxx
+    dimensions:
+      height: 128
+      width: 128
+      offset_height: 1
+      offset_width: 2
+    model: st7789v
+    data_rate: 80MHz
+    cs_pin: GPIO15
+    dc_pin: GPIO33
+    reset_pin: GPIO34
+    invert_colors: true
+    transform:
+      mirror_x: false
+      mirror_y: true
+      swap_xy: true
+    lambda: |-
+      it.rectangle(0,  0, it.get_width(), it.get_height(), id(my_red));
+      it.printf(10, 10, id(font_small), "Wall Tilt");
+      it.printf(10, 40, id(font_small), "Pitch: %.1f°", id(wall_pitch).state);
+      it.printf(10, 60, id(font_small), "Roll: %.1f°", id(wall_roll).state);
+
+interval:
+  - interval: 1s
+    then:
+      - component.update: lcd_display

@@ -1,0 +1,11 @@
+.esphome
+.idea
+.venv
+.vscode
+.DS_Store
+Gemfile.lock
+_site
+__pycache__
+.pio
+
+/secrets.yaml

@@ -1,0 +1,41 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/cpp
+{
+	"name": "C++",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"features": {
+		"ghcr.io/devcontainers/features/python:1": {}
+	},
+	"runArgs": [
+		"--device=/dev/ttyACM0",
+		"--privileged"
+	],
+	"customizations": {
+		"vscode": { 
+			"extensions": [
+				"espressif.esp-idf-extension",
+		 		"ms-vscode.cmake-tools",
+			 	"ms-vscode.cpptools",
+				"platformio.platformio-ide",
+				"ms-azuretools.vscode-containers",
+			]
+		}
+	},
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "sudo chmod 777 /dev/ttyACM0",
+
+	// Configure tool-specific properties.
+	// "customizations": {},
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}
