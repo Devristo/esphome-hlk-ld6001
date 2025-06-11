@@ -1,0 +1,206 @@
+esphome:
+  name: "hlk-ld6001a"
+  friendly_name: "Hilink HLK-LD6001A mmWave sensor"
+
+  # The components uses gnu++17 syntax at places.
+  platformio_options:
+    build_flags: "-std=gnu++17"
+    build_unflags: "-std=gnu++11"
+
+external_components:
+  - source: github://devristo/esphome-hlk-ld6001@main
+    components: [ld6001, ld6001a]
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  level: DEBUG
+  logs:
+    sensor: WARN
+
+ota:
+  - platform: esphome
+    id: ota_esphome
+
+captive_portal:
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+web_server:
+  port: 80
+
+uart:
+  id: uart_2
+  tx_pin: GPIO5
+  rx_pin: GPIO7
+  baud_rate: 115200
+
+mqtt:
+  id: mqtt_client
+  enable_on_boot: true
+  broker: !secret mqtt_broker
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  log_topic: null
+
+ld6001a:
+  id: ld6001a_radar
+  uart_id: uart_2
+  throttle: 1000ms
+  reset_pin: GPIO8
+
+  on_target_enter:
+    then:
+      - lambda: |-
+          ESP_LOGE("ld6001a", "LAMBDA: Target Enter %d", target_id);
+      - mqtt.publish_json:
+          topic: !lambda |-
+            return id(mqtt_client)->get_topic_prefix() + "/target_enter";
+          payload: |-
+            root["target_id"] = target_id;
+
+  on_target_left:
+    then:
+      - lambda: |-
+          ESP_LOGE("ld6001a", "LAMBDA: Target Left %d, dwell time is %d s", target_id, dwell_time);
+      - mqtt.publish_json:
+          topic: !lambda |-
+            return id(mqtt_client)->get_topic_prefix() + "/target_left";
+          payload: |-
+            root["target_id"] = target_id;
+            root["dwell_time"] = dwell_time;
+  # on_update:
+  #   then:
+  #     - lambda: |-
+  #         ESP_LOGW("ld6001a", "People count %d", targets.size());
+  #     - mqtt.publish_json:
+  #         topic: !lambda |-
+  #           return id(mqtt_client)->get_topic_prefix() + "/targets";
+  #         payload: |-
+  #           auto target_data = root.createNestedArray("target_data");
+
+  #           for (const auto &target : targets) {
+  #             auto data = target_data.createNestedObject();
+  #             data["id"] = target.id;
+  #             data["x"] = target.x * 100;
+  #             data["y"] = target.y * 100;
+  #             data["z"] = target.z * 100;
+  #             data["vx"] = target.vx * 100;
+  #             data["vy"] = target.vy * 100;
+  #             data["vz"] = target.vz * 100;
+  #           }
+interval:
+  - interval: 5s
+    then:
+      - mqtt.publish_json:
+          topic: !lambda |-
+            return id(mqtt_client)->get_topic_prefix() + "/targets";
+          payload: |-
+            auto targets = id(ld6001a_radar).get_targets();
+            auto target_data = root.createNestedArray("target_data");
+
+            for (const auto &target : targets) {
+              auto data = target_data.createNestedObject();
+              data["id"] = target.id;
+              data["x"] = target.x * 100;
+              data["y"] = target.y * 100;
+              data["z"] = target.z * 100;
+              data["vx"] = target.vx * 100;
+              data["vy"] = target.vy * 100;
+              data["vz"] = target.vz * 100;
+            }
+
+sensor:
+  - platform: ld6001a
+    ld6001a_id: ld6001a_radar
+    target_count:
+      name: Presence Target Count
+    target_1:
+      x:
+        name: Target-1 X
+      y:
+        name: Target-1 Y
+      z:
+        name: Target-1 Z
+      distance:
+        name: Target-1 Distance
+    zone_1:
+      target_count:
+        name: "Zone-1 Target Count"
+    zone_2:
+      target_count:
+        name: "Zone-2 Target Count"
+    zone_3:
+      target_count:
+        name: "Zone-3 Target Count"
+    zone_4:
+      target_count:
+        name: "Zone-4 Target Count"
+
+number:
+  - platform: ld6001a
+    ld6001a_id: ld6001a_radar
+    ground_radius:
+      name: "Config: Ground Radius"
+    target_exit_boundary_time:
+      name: "Config: Target Exit Boundary Time"
+    static_target_disappearance_time:
+      name: "Config: Static Target Disappearance Time"
+    moving_target_disappearance_time:
+      name: "Config: Moving Target Disappearance Time"
+    installation_height:
+      name: "Config: Installation Height"
+    long_distance_sensitivity:
+      name: "Config: Long Distance Sensitivity"
+    heart_beat:
+      name: "Config: Heart beat (unclear what this does)"
+    x_min:
+      name: "Config: X min"
+    x_max:
+      name: "Config: X max"
+    y_min:
+      name: "Config: Y min"
+    y_max:
+      name: "Config: Y max"
+    zone_1:
+      x1:
+        name: "Config: Zone-1 X1"
+      y1:
+        name: "Config: Zone-1 Y1"
+      x2:
+        name: "Config: Zone-1 X2"
+      y2:
+        name: "Config: Zone-1 Y2"
+    zone_2:
+      x1:
+        name: "Config: Zone-2 X1"
+      y1:
+        name: "Config: Zone-2 Y1"
+      x2:
+        name: "Config: Zone-2 X2"
+      y2:
+        name: "Config: Zone-2 Y2"
+    zone_3:
+      x1:
+        name: "Config: Zone-3 X1"
+      y1:
+        name: "Config: Zone-3 Y1"
+      x2:
+        name: "Config: Zone-3 X2"
+      y2:
+        name: "Config: Zone-3 Y2"
+    zone_4:
+      x1:
+        name: "Config: Zone-4 X1"
+      y1:
+        name: "Config: Zone-4 Y1"
+      x2:
+        name: "Config: Zone-4 X2"
+      y2:
+        name: "Config: Zone-4 Y2"

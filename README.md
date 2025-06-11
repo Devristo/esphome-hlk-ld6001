@@ -1,5 +1,8 @@
 # Esphome component for Hilink HLK-6001(A)
 
+## Using the component
+
+See [example.yaml](./example.yaml).
 
 ## Development
 
