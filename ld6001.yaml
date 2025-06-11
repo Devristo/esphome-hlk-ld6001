@@ -35,13 +35,6 @@ wifi:
 web_server:
   port: 80
 
-# light:
-#   - platform: status_led
-#     name: ESP32 LED
-#     pin: GPIO35
-#     internal: False
-#     restore_mode: ALWAYS_OFF
-
 button:
   - platform: restart
     icon: mdi:power-cycle
@@ -58,22 +51,6 @@ font:
   - file: "fonts/AdwaitaMono-Regular.ttf"
     id: font_small
     size: 16
-#esp32_camera:
-##  resolution: "FHD"
-#  external_clock:
-#    pin: GPIO15
-#    frequency: 20MHz
-#  i2c_pins:
-#    sda: GPIO4
-#    scl: GPIO5
-#  data_pins: [GPIO11, GPIO9, GPIO8, GPIO10, GPIO12, GPIO18, GPIO17, GPIO16]
-#  vsync_pin: GPIO6
-#  href_pin: GPIO7
-#  pixel_clock_pin: GPIO13
-#
-#  # Image settings
-#  name: ESP32-CAM
-
 
 uart:
   id: uart_2

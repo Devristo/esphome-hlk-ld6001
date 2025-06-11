@@ -1,14 +1,37 @@
-# Esphome component for Hilink HLK-6001(A)
+# ESPHome Components for HiLink HLK-LD6001 and HLK-LD6001A
 
-## Using the component
+This repository provides ESPHome components for the [HiLink HLK-LD6001](https://www.hlktech.net/index.php?id=1313) and [HLK-LD6001A](https://www.hlktech.net/index.php?id=1309) 60GHz mmWave radar sensors.
 
-See [example.yaml](./example.yaml).
+While both sensors offer similar performance, they use different communication protocols. As a result, separate ESPHome components are included for each model.
+
+| Feature               | LD6001 | LD6001A |
+|-----------------------|--------|---------|
+| Frequency             | 60GHz  | 60GHz   |
+| Antenna Configuration | 4T3R   | 4T4R    |
+| Mount Location        | Wall   | Ceiling |
+| Max People Count      | 8      | 10      |
+| Max People Tracking   | 8      | 10      |
+| Sensitivity Settings  | 2      | 9       |
+| Configurable Range    | No     | Yes     |
+| Bluetooth             | No     | No      |
+| UART                  | Yes    | Yes     |
+
+## Getting Started
+
+See [example.yaml](./example.yaml) for configuration and usage instructions.
+
+The component has been tested on several ESP32-S3 boards.
 
 ## Development
 
-The repository contains devcontainer configuration to set up a docker-based environment.
+A devcontainer configuration is provided for a Docker-based development environment.
 
-### Tests
+### Running Tests
 
-Run `pio test` to run the test, or when using VSCode, use the PlatformIO extension to run the tests.
-At the moment, this repository only contains unit tests for a small part of the code.
+To run tests, execute:
+
+```sh
+pio test
+```
+
+Alternatively, you can run tests using the PlatformIO extension in VSCode. Note that only part of the codebase is currently covered by unit tests.

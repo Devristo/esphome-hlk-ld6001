@@ -4,16 +4,11 @@ esphome:
   platformio_options:
     build_flags: "-std=gnu++17"
     build_unflags: "-std=gnu++11"
-    # board_build.arduino.memory_type: qio_opi
 
 esp32:
   board: esp32-s3-devkitc-1
   framework:
     type: arduino
-
-# psram:
-#   mode: octal
-#   speed: 80MHz
 
 # Enable logging
 logger:
@@ -21,9 +16,6 @@ logger:
   logs:
     sensor: WARN
   # hardware_uart: UART0
-
-# Enable Home Assistant API
-api:
 
 ota:
   - platform: esphome
@@ -38,13 +30,6 @@ wifi:
 
 web_server:
   port: 80
-
-# light:
-#   - platform: status_led
-#     name: ESP32 LED
-#     pin: GPIO35
-#     internal: False
-#     restore_mode: ALWAYS_OFF
 
 button:
   - platform: restart
@@ -69,13 +54,6 @@ uart:
   tx_pin: GPIO5
   rx_pin: GPIO7
   baud_rate: 115200
-  # debug:
-  #     direction: BOTH
-  #     dummy_receiver: false
-  #     after:
-  #       delimiter: "\r\n"
-  #     sequence:
-  #       - lambda: UARTDebug::log_string(direction, bytes);
 
 mqtt:
   id: mqtt_client
@@ -179,12 +157,6 @@ sensor:
       target_count:
         name: "Zone-4 Target Count"
 
-# text_sensor:
-#   - platform: ld6001a
-#     ld6001_id: ld6001a_radar
-#     version:
-#       name: Version
-
 number:
   - platform: ld6001a
     ld6001a_id: ld6001a_radar
@@ -213,52 +185,36 @@ number:
     zone_1:
       x1:
         name: "Config: Zone-1 X1"
-        # restore_value: true
       y1:
         name: "Config: Zone-1 Y1"
-        # restore_value: true
       x2:
         name: "Config: Zone-1 X2"
-        # restore_value: true
       y2:
         name: "Config: Zone-1 Y2"
-        # restore_value: true
     zone_2:
       x1:
         name: "Config: Zone-2 X1"
-        # restore_value: true
       y1:
         name: "Config: Zone-2 Y1"
-        # restore_value: true
       x2:
         name: "Config: Zone-2 X2"
-        # restore_value: true
       y2:
         name: "Config: Zone-2 Y2"
-        # restore_value: true
     zone_3:
       x1:
         name: "Config: Zone-3 X1"
-        # restore_value: true
       y1:
         name: "Config: Zone-3 Y1"
-        # restore_value: true
       x2:
         name: "Config: Zone-3 X2"
-        # restore_value: true
       y2:
         name: "Config: Zone-3 Y2"
-        # restore_value: true
     zone_4:
       x1:
         name: "Config: Zone-4 X1"
-        # restore_value: true
       y1:
         name: "Config: Zone-4 Y1"
-        # restore_value: true
       x2:
         name: "Config: Zone-4 X2"
-        # restore_value: true
       y2:
         name: "Config: Zone-4 Y2"
-        # restore_value: true
