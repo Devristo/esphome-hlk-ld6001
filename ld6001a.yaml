@@ -5,6 +5,11 @@ esphome:
     build_flags: "-std=gnu++17"
     build_unflags: "-std=gnu++11"
 
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: UTC
+
 esp32:
   board: esp32-s3-devkitc-1
   framework:
@@ -15,6 +20,7 @@ logger:
   level: DEBUG
   logs:
     sensor: WARN
+    mpu6886: WARN
   # hardware_uart: UART0
 
 ota:
@@ -109,26 +115,26 @@ ld6001a:
   #             data["vy"] = target.vy * 100;
   #             data["vz"] = target.vz * 100;
   #           }
-interval:
-  - interval: 5s
-    then:
-      - mqtt.publish_json:
-          topic: !lambda |-
-            return id(mqtt_client)->get_topic_prefix() + "/targets";
-          payload: |-
-            auto targets = id(ld6001a_radar).get_targets();
-            auto target_data = root.createNestedArray("target_data");
+# interval:
+#   - interval: 5s
+#     then:
+#       - mqtt.publish_json:
+#           topic: !lambda |-
+#             return id(mqtt_client)->get_topic_prefix() + "/targets";
+#           payload: |-
+#             auto targets = id(ld6001a_radar).get_targets();
+#             auto target_data = root.createNestedArray("target_data");
 
-            for (const auto &target : targets) {
-              auto data = target_data.createNestedObject();
-              data["id"] = target.id;
-              data["x"] = target.x * 100;
-              data["y"] = target.y * 100;
-              data["z"] = target.z * 100;
-              data["vx"] = target.vx * 100;
-              data["vy"] = target.vy * 100;
-              data["vz"] = target.vz * 100;
-            }
+#             for (const auto &target : targets) {
+#               auto data = target_data.createNestedObject();
+#               data["id"] = target.id;
+#               data["x"] = target.x * 100;
+#               data["y"] = target.y * 100;
+#               data["z"] = target.z * 100;
+#               data["vx"] = target.vx * 100;
+#               data["vy"] = target.vy * 100;
+#               data["vz"] = target.vz * 100;
+#             }
 
 sensor:
   - platform: ld6001a
@@ -138,12 +144,16 @@ sensor:
     target_1:
       x:
         name: Target-1 X
+        internal: true
       y:
         name: Target-1 Y
+        internal: true
       z:
         name: Target-1 Z
+        internal: true
       distance:
         name: Target-1 Distance
+        internal: true
     zone_1:
       target_count:
         name: "Zone-1 Target Count"

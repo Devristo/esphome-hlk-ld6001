@@ -4,23 +4,23 @@ esphome:
   platformio_options:
     build_flags: "-std=gnu++17"
     build_unflags: "-std=gnu++11"
-    # board_build.arduino.memory_type: qio_opi
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: UTC
 
 esp32:
   board: esp32-s3-devkitc-1
   framework:
     type: arduino
 
-# psram:
-#   mode: octal
-#   speed: 80MHz
-
 # Enable logging
 logger:
-  level: WARN
-
-# Enable Home Assistant API
-api:
+  level: DEBUG
+  logs:
+    sensor: WARN
+    mpu6886: WARN
 
 ota:
   - platform: esphome
@@ -57,7 +57,6 @@ uart:
   tx_pin: GPIO2
   rx_pin: GPIO1
   baud_rate: 9600
-#  port: '/dev/ttyUSB0'
   parity: EVEN
   stop_bits: 1
   data_bits: 8
@@ -77,6 +76,27 @@ ld6001:
   uart_id: uart_2
   update_interval: 500ms
 
+  on_target_enter:
+    then:
+      - lambda: |-
+          ESP_LOGE("ld6001", "LAMBDA: Target Enter %d", target_id);
+      - mqtt.publish_json:
+          topic: !lambda |-
+            return id(mqtt_client)->get_topic_prefix() + "/target_enter";
+          payload: |-
+            root["target_id"] = target_id;
+  
+  on_target_left:
+    then:
+      - lambda: |-
+          ESP_LOGE("ld6001", "LAMBDA: Target Left %d, dwell time is %d s", target_id, dwell_time);
+      - mqtt.publish_json:
+          topic: !lambda |-
+            return id(mqtt_client)->get_topic_prefix() + "/target_left";
+          payload: |-
+            root["target_id"] = target_id;
+            root["dwell_time"] = dwell_time;
+
 i2c:
   sda: GPIO38
   scl: GPIO39
@@ -91,62 +111,84 @@ sensor:
     target_1:
       x:
         name: Target-1 X
+        # internal: true
       y:
         name: Target-1 Y
+        # internal: true
       pitch_angle:
         name: Target-1 Pitch Angle
+        # internal: true
       horizontal_angle:
         name: Target-1 Horizontal Angle
+        # internal: true
       distance:
         name: Target-1 Distance
+        # internal: true
     target_2:
       x:
         name: Target-2 X
+        internal: true
       y:
         name: Target-2 Y
+        internal: true
       pitch_angle:
         name: Target-2 Pitch Angle
+        internal: true
       horizontal_angle:
         name: Target-2 Horizontal Angle
+        internal: true
       distance:
         name: Target-2 Distance
+        internal: true
     zone_1:
       target_count:
         name: Zone-1 Target Count
+        internal: true
     zone_2:
       target_count:
         name: Zone-2 Target Count
+        internal: true
     zone_3:
       target_count:
         name: Zone-3 Target Count
+        internal: true
     zone_4:
       target_count:
         name: Zone-4 Target Count
+        internal: true
   - platform: mpu6886
     address: 0x68
     update_interval: 1s
     accel_x:
       name: "MPU6886 Accel X"
+      internal: true
       id: accel_x
     accel_y:
       name: "MPU6886 Accel Y"
+      internal: true
       id: accel_y
     accel_z:
       name: "MPU6886 Accel z"
+      internal: true
       id: accel_z
     gyro_x:
       name: "MPU6886 Gyro X"
+      internal: true
     gyro_y:
       name: "MPU6886 Gyro Y"
+      internal: true
     gyro_z:
       name: "MPU6886 Gyro z"
+      internal: true
     temperature:
       name: "MPU6886 Temperature"
+      internal: true
   - platform: template
     name: "Wall Pitch"
     id: wall_pitch
     update_interval: 1s
     unit_of_measurement: "°"
+    internal: true
     lambda: |-
       return atan2(id(accel_z).state, sqrt(pow(id(accel_x).state, 2) + pow(id(accel_y).state, 2))) * 180.0 / PI;
 
@@ -155,6 +197,7 @@ sensor:
     id: wall_roll
     update_interval: 1s
     unit_of_measurement: "°"
+    internal: true
     lambda: |-
       return atan2(id(accel_y).state, id(accel_x).state) * 180.0 / PI;
 

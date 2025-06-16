@@ -10,6 +10,7 @@
 #include "esphome/core/helpers.h"
 #include "esphome/core/preferences.h"
 #include "frame_parser.h"
+#include "target_tracker.h"
 
 #ifdef USE_SENSOR
 #include "esphome/components/sensor/sensor.h"
@@ -72,7 +73,7 @@ struct ZoneOfNumbers {
 };
 #endif
 
-class LD6001Component : public PollingComponent, public uart::UARTDevice, public FrameHandler {
+class LD6001Component : public PollingComponent, public uart::UARTDevice, public FrameHandler, public TargetEventHandler<uint8_t> {
 #ifdef USE_SENSOR
   SUB_SENSOR(target_count)
 #endif
@@ -93,6 +94,13 @@ class LD6001Component : public PollingComponent, public uart::UARTDevice, public
 
   void on_radar_response(const RadarResponse &response) override;
   void on_status_response(const StatusResponse &response) override;
+
+  virtual void on_target_enter(uint8_t target_id) override;
+  virtual void on_target_left(uint8_t target_id, uint32_t dwell_time) override;
+
+  Trigger<uint8_t> *get_target_enter_trigger() { return &this->target_enter_trigger_; }
+  Trigger<uint8_t, uint32_t> *get_target_left_trigger() { return &this->target_left_trigger_; }
+  Trigger<const std::vector<Target> &> *get_update_trigger() { return &this->update_trigger_; }
 
 #ifdef USE_SENSOR
   void set_move_x_sensor(uint8_t target, sensor::Sensor *s);
@@ -117,6 +125,11 @@ protected:
   void read_radar_frame_(const uint8_t *buffer);
   void update_last_seen_(uint8_t target_id);
 
+  TargetTracker<Target> target_tracker_{*this};
+  Trigger<uint8_t> target_enter_trigger_;
+  Trigger<uint8_t, uint32_t> target_left_trigger_;
+  Trigger<const std::vector<Target> &> update_trigger_;
+
   TargetInfo target_info_ = {};
   Zone zone_config_[MAX_ZONES];
   uint32_t last_periodic_millis_ = 0;
@@ -125,11 +138,6 @@ protected:
   uint32_t moving_presence_millis_ = 0;
   uint16_t throttle_ = 1000;
   uint16_t timeout_ = 5;
-
-  std::deque<uint8_t> announce_entry_;
-  std::deque<uint8_t> removed_targets_;
-  std::unordered_map<uint8_t, uint32_t> entry_times_;
-  std::unordered_map<uint8_t, uint32_t> last_seen_times_;
 
   FrameParser frame_iter_;
 
