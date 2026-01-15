@@ -102,6 +102,7 @@ class FrameParser {
   std::vector<uint8_t> current_frame_;  // The current complete frame
   std::size_t body_len_ = 0;            // Length of the body for frames that include it
   FrameHandler &frame_handler_;         // Reference to the frame handler
+  bool new_version = false;
 
   float read_float(const uint8_t *ptr) {
     float value;
@@ -131,8 +132,8 @@ class FrameParser {
     using MatcherFn = MatchResult (FrameParser::*)();
 
     MatcherFn matchers[] = {
-      &FrameParser::match_at_ok_, 
-      &FrameParser::match_binary_type1_, 
+      &FrameParser::match_at_ok_,
+      &FrameParser::match_binary_type1_,
       &FrameParser::match_binary_type2_,
       &FrameParser::match_read_response_,
     };
@@ -158,12 +159,17 @@ class FrameParser {
       }
 
       if (complete) {
-        state_ = ParseState::IDLE;        
+        state_ = ParseState::IDLE;
       } if (partial) {
         this->state_ = ParseState::READING_HEADER;
       } else if (invalid) {
         state_ = ParseState::INVALID;
         drain_one_byte();
+      }
+
+      // invalid buffer
+      if (buffer_.size() > 1024) {
+          buffer_.clear();
       }
     } while ((buffer_.size() > 0) && invalid);
   }
@@ -192,18 +198,24 @@ class FrameParser {
       return MatchResult::INVALID;
     }
 
-    std::string target_exit_marker = "Target exit \xA3\xBA";
+    std::string target_exit_marker = "Target exit";
     auto target_exit_pos = std::search(buffer_.begin(), buffer_.end(), target_exit_marker.begin(), target_exit_marker.end());
 
     if (target_exit_pos == buffer_.end()) {
       return MatchResult::PARTIAL;
     }
 
-    std::string end_marker = "s,";
+    std::string end_marker = "}";
     auto end_pos = std::search(target_exit_pos, buffer_.end(), end_marker.begin(), end_marker.end());
 
     if (end_pos == buffer_.end()) {
       return MatchResult::PARTIAL;
+    }
+
+    std::string new_version_marker = "PeopleCntSoftVerison"; // 20 chars
+    auto version_pos = std::search(buffer_.begin(), buffer_.end(), new_version_marker.begin(), new_version_marker.end());
+    if (version_pos != buffer_.end()) {
+      this->new_version = true;
     }
 
     std::string response(buffer_.begin(), end_pos);
@@ -214,22 +226,35 @@ class FrameParser {
 
     replaceAll(response, "\x09\x0a", "\r\n");
     replaceAll(response, "\xa3\xba", " ");
-    replaceAll(response, "Moving target", "\"Moving target\":");
-    replaceAll(response, "Static target", "\"Static target\":");
-    replaceAll(response, "Target exit", "\"Target exit\":");
+    if (!this->new_version) {
+      replaceAll(response, "Moving target", "\"Moving target\":");
+      replaceAll(response, "Static target", "\"Static target\":");
+      replaceAll(response, "Target exit", "\"Target exit\":");
+    }
+    replaceAll(response, "NOP_1.07-01", "\"NOP_1.07-01\"");
     replaceAll(response, "s,", ",");
 
     response += "}";
+
+    replaceAll(response, ",\r\n}", "\r\n}");
 
     ESP_LOGW("ld6001a", "Fixed READ response: %s", response.c_str());
 
     json::parse_json(response, [this](ArduinoJson::JsonObject obj) -> bool {
       ReadParamsResponse read_params_response;
-      read_params_response.softwareVersion = obj["SoftwareVersion"].as<std::string>();
+      if (this->new_version)
+        read_params_response.softwareVersion = obj["PeopleCntSoftVerison"].as<std::string>();
+      else
+        read_params_response.softwareVersion = obj["SoftwareVersion"].as<std::string>();
       read_params_response.range_res = obj["RangeRes"].as<float>();
       read_params_response.vel_res = obj["VelRes"].as<float>();
-      read_params_response.time = obj["Time"].as<int>();
-      read_params_response.prog = obj["Prog"].as<int>();
+      if (this->new_version) {
+        read_params_response.time = obj["TIME"].as<int>();
+        read_params_response.prog = obj["PROG"].as<int>();
+      } else {
+        read_params_response.time = obj["Time"].as<int>();
+        read_params_response.prog = obj["Prog"].as<int>();
+      }
       read_params_response.range = obj["Range"].as<int>();
       read_params_response.range_sensitivity = obj["Sen"].as<int>();
       read_params_response.heart_beat_interval = obj["Heart_Time"].as<int>();
@@ -293,8 +318,8 @@ class FrameParser {
 
       buffer_.erase(buffer_.begin(), buffer_.begin() + pos+1 + 1);
 
-      this->frame_handler_.on_ack_response(); 
-  
+      this->frame_handler_.on_ack_response();
+
       return MatchResult::COMPLETE;
     }
 
@@ -341,13 +366,12 @@ class FrameParser {
     static const std::array<uint8_t, 8> header = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
 
     bool match = std::equal(header.begin(), header.begin() + match_size, buffer_.begin());
-
-    if (!match) { 
+    if (!match) {
       return MatchResult::INVALID;
     } else if (buffer_size < header.size() + 4) {
       return MatchResult::PARTIAL;
     }
-    
+
     auto body_len_ = read_uint32(&buffer_[8]) + 1;
 
     if (buffer_size < body_len_) {
