@@ -208,14 +208,15 @@ class FrameParser {
     std::string end_marker = "}";
     auto end_pos = std::search(target_exit_pos, buffer_.end(), end_marker.begin(), end_marker.end());
 
+    // Some older firmware do not return a } as end token.
     if (end_pos == buffer_.end()) {
-      return MatchResult::PARTIAL;
+      std::string new_marker = "s,";
+      end_pos = std::search(target_exit_pos, buffer_.end(), new_marker.begin(), new_marker.end());
     }
 
-    std::string new_version_marker = "PeopleCntSoftVerison"; // 20 chars
-    auto version_pos = std::search(buffer_.begin(), buffer_.end(), new_version_marker.begin(), new_version_marker.end());
-    if (version_pos != buffer_.end()) {
-      this->new_version = true;
+    // Neither token is found (yet).
+    if (end_pos == buffer_.end()) {
+      return MatchResult::PARTIAL;
     }
 
     std::string response(buffer_.begin(), end_pos);
@@ -223,14 +224,13 @@ class FrameParser {
     ESP_LOGD("ld6001a", "Found READ response: %s", response.c_str());
 
     buffer_.erase(buffer_.begin(), end_pos + 1);  // Remove the processed part from the buffer
-
+  
+    // It looks like JSON, but it isnt. Try to fix it
     replaceAll(response, "\x09\x0a", "\r\n");
     replaceAll(response, "\xa3\xba", " ");
-    if (!this->new_version) {
-      replaceAll(response, "Moving target", "\"Moving target\":");
-      replaceAll(response, "Static target", "\"Static target\":");
-      replaceAll(response, "Target exit", "\"Target exit\":");
-    }
+    replaceAll(response, "\nMoving target", "\n\"Moving target\":");
+    replaceAll(response, "\nStatic target", "\n\"Static target\":");
+    replaceAll(response, "\nTarget exit", "\n\"Target exit\":");
     replaceAll(response, "NOP_1.07-01", "\"NOP_1.07-01\"");
     replaceAll(response, "s,", ",");
 
