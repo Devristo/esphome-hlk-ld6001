@@ -102,7 +102,6 @@ class FrameParser {
   std::vector<uint8_t> current_frame_;  // The current complete frame
   std::size_t body_len_ = 0;            // Length of the body for frames that include it
   FrameHandler &frame_handler_;         // Reference to the frame handler
-  bool new_version = false;
 
   float read_float(const uint8_t *ptr) {
     float value;
@@ -208,14 +207,15 @@ class FrameParser {
     std::string end_marker = "}";
     auto end_pos = std::search(target_exit_pos, buffer_.end(), end_marker.begin(), end_marker.end());
 
+    // Some older firmware do not return a } as end token.
     if (end_pos == buffer_.end()) {
-      return MatchResult::PARTIAL;
+      std::string old_end_marker = "s,";
+      end_pos = std::search(target_exit_pos, buffer_.end(), old_end_marker.begin(), old_end_marker.end());
     }
 
-    std::string new_version_marker = "PeopleCntSoftVerison"; // 20 chars
-    auto version_pos = std::search(buffer_.begin(), buffer_.end(), new_version_marker.begin(), new_version_marker.end());
-    if (version_pos != buffer_.end()) {
-      this->new_version = true;
+    // Neither token is found (yet).
+    if (end_pos == buffer_.end()) {
+      return MatchResult::PARTIAL;
     }
 
     std::string response(buffer_.begin(), end_pos);
@@ -223,15 +223,17 @@ class FrameParser {
     ESP_LOGD("ld6001a", "Found READ response: %s", response.c_str());
 
     buffer_.erase(buffer_.begin(), end_pos + 1);  // Remove the processed part from the buffer
-
+  
+    // It looks like JSON, but it isnt. Try to fix it
     replaceAll(response, "\x09\x0a", "\r\n");
     replaceAll(response, "\xa3\xba", " ");
-    if (!this->new_version) {
-      replaceAll(response, "Moving target", "\"Moving target\":");
-      replaceAll(response, "Static target", "\"Static target\":");
-      replaceAll(response, "Target exit", "\"Target exit\":");
-    }
+    replaceAll(response, "\nMoving target", "\n\"Moving target\":");
+    replaceAll(response, "\nStatic target", "\n\"Static target\":");
+    replaceAll(response, "\nTarget exit", "\n\"Target exit\":");
     replaceAll(response, "NOP_1.07-01", "\"NOP_1.07-01\"");
+    replaceAll(response, "SoftwareVersion", "PeopleCntSoftVerison");  // for the version older than NOP_1.07
+    replaceAll(response, "\"Time\"", "\"TIME\"");  // for the version older than NOP_1.07
+    replaceAll(response, "\"Prog\"", "\"PROG\"");  // for the version older than NOP_1.07
     replaceAll(response, "s,", ",");
 
     response += "}";
@@ -242,19 +244,11 @@ class FrameParser {
 
     json::parse_json(response, [this](ArduinoJson::JsonObject obj) -> bool {
       ReadParamsResponse read_params_response;
-      if (this->new_version)
-        read_params_response.softwareVersion = obj["PeopleCntSoftVerison"].as<std::string>();
-      else
-        read_params_response.softwareVersion = obj["SoftwareVersion"].as<std::string>();
+      read_params_response.softwareVersion = obj["PeopleCntSoftVerison"].as<std::string>();
       read_params_response.range_res = obj["RangeRes"].as<float>();
       read_params_response.vel_res = obj["VelRes"].as<float>();
-      if (this->new_version) {
-        read_params_response.time = obj["TIME"].as<int>();
-        read_params_response.prog = obj["PROG"].as<int>();
-      } else {
-        read_params_response.time = obj["Time"].as<int>();
-        read_params_response.prog = obj["Prog"].as<int>();
-      }
+      read_params_response.time = obj["TIME"].as<int>();
+      read_params_response.prog = obj["PROG"].as<int>();
       read_params_response.range = obj["Range"].as<int>();
       read_params_response.range_sensitivity = obj["Sen"].as<int>();
       read_params_response.heart_beat_interval = obj["Heart_Time"].as<int>();
