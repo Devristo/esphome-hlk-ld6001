@@ -102,7 +102,6 @@ class FrameParser {
   std::vector<uint8_t> current_frame_;  // The current complete frame
   std::size_t body_len_ = 0;            // Length of the body for frames that include it
   FrameHandler &frame_handler_;         // Reference to the frame handler
-  bool new_version = false;
 
   float read_float(const uint8_t *ptr) {
     float value;
@@ -210,8 +209,8 @@ class FrameParser {
 
     // Some older firmware do not return a } as end token.
     if (end_pos == buffer_.end()) {
-      std::string new_marker = "s,";
-      end_pos = std::search(target_exit_pos, buffer_.end(), new_marker.begin(), new_marker.end());
+      std::string old_end_marker = "s,";
+      end_pos = std::search(target_exit_pos, buffer_.end(), old_end_marker.begin(), old_end_marker.end());
     }
 
     // Neither token is found (yet).
@@ -232,6 +231,9 @@ class FrameParser {
     replaceAll(response, "\nStatic target", "\n\"Static target\":");
     replaceAll(response, "\nTarget exit", "\n\"Target exit\":");
     replaceAll(response, "NOP_1.07-01", "\"NOP_1.07-01\"");
+    replaceAll(response, "SoftwareVersion", "PeopleCntSoftVerison");  // for the version older than NOP_1.07
+    replaceAll(response, "\"Time\"", "\"TIME\"");  // for the version older than NOP_1.07
+    replaceAll(response, "\"Prog\"", "\"PROG\"");  // for the version older than NOP_1.07
     replaceAll(response, "s,", ",");
 
     response += "}";
@@ -242,19 +244,11 @@ class FrameParser {
 
     json::parse_json(response, [this](ArduinoJson::JsonObject obj) -> bool {
       ReadParamsResponse read_params_response;
-      if (this->new_version)
-        read_params_response.softwareVersion = obj["PeopleCntSoftVerison"].as<std::string>();
-      else
-        read_params_response.softwareVersion = obj["SoftwareVersion"].as<std::string>();
+      read_params_response.softwareVersion = obj["PeopleCntSoftVerison"].as<std::string>();
       read_params_response.range_res = obj["RangeRes"].as<float>();
       read_params_response.vel_res = obj["VelRes"].as<float>();
-      if (this->new_version) {
-        read_params_response.time = obj["TIME"].as<int>();
-        read_params_response.prog = obj["PROG"].as<int>();
-      } else {
-        read_params_response.time = obj["Time"].as<int>();
-        read_params_response.prog = obj["Prog"].as<int>();
-      }
+      read_params_response.time = obj["TIME"].as<int>();
+      read_params_response.prog = obj["PROG"].as<int>();
       read_params_response.range = obj["Range"].as<int>();
       read_params_response.range_sensitivity = obj["Sen"].as<int>();
       read_params_response.heart_beat_interval = obj["Heart_Time"].as<int>();
