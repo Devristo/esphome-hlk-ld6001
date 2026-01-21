@@ -22,6 +22,10 @@
 #include "esphome/components/number/number.h"
 #endif
 
+#ifdef USE_BUTTON
+#include "esphome/components/button/button.h"
+#endif
+
 #define MAX_TARGETS 10
 
 namespace esphome {
@@ -130,6 +134,14 @@ class LD6001AComponent : public Component, public uart::UARTDevice, public Frame
   void set_move_z_sensor(uint8_t target, sensor::Sensor *s);
   void set_move_distance_sensor(uint8_t target, sensor::Sensor *s);
   void set_zone_target_count_sensor(uint8_t zone, sensor::Sensor *s);
+#endif
+
+#ifdef USE_BUTTON
+  SUB_BUTTON(start)
+  SUB_BUTTON(stop)
+  SUB_BUTTON(hard_reset)
+  SUB_BUTTON(soft_reset)
+  SUB_BUTTON(factory_reset)
 #endif
 
  protected:

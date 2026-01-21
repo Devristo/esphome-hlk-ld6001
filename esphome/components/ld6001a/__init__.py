@@ -81,5 +81,4 @@ async def to_code(config):
 
     if CONF_RESET_PIN in config:
         reset_pin = await cg.gpio_pin_expression(config[CONF_RESET_PIN])
-        print(f"Reset pin: {reset_pin}")
         cg.add(var.set_reset_pin(reset_pin))

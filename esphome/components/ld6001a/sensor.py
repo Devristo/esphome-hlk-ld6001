@@ -2,22 +2,15 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import sensor
 from esphome.const import (
-    CONF_ANGLE,
     CONF_DISTANCE,
     DEVICE_CLASS_DISTANCE,
     UNIT_CENTIMETER,
-    UNIT_DEGREES,
-    UNIT_MILLIMETER,
 )
 
 from . import CONF_LD6001A_ID, LD6001AComponent, MAX_ZONES
 
 DEPENDENCIES = ["ld6001a"]
 
-CONF_PITCH_ANGLE = "pitch_angle"
-CONF_HORIZONTAL_ANGLE = "horizontal_angle"
-CONF_MOVING_TARGET_COUNT = "moving_target_count"
-CONF_STILL_TARGET_COUNT = "still_target_count"
 CONF_TARGET_COUNT = "target_count"
 CONF_X = "x"
 CONF_Y = "y"
@@ -38,19 +31,11 @@ ICON_SPEEDOMETER_SLOW = "mdi:speedometer-slow"
 
 MAX_TARGETS = 10
 
-UNIT_MILLIMETER_PER_SECOND = "mm/s"
-
 CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(CONF_LD6001A_ID): cv.use_id(LD6001AComponent),
         cv.Optional(CONF_TARGET_COUNT): sensor.sensor_schema(
             icon=ICON_ACCOUNT_GROUP,
-        ),
-        cv.Optional(CONF_STILL_TARGET_COUNT): sensor.sensor_schema(
-            icon=ICON_HUMAN_GREETING_PROXIMITY,
-        ),
-        cv.Optional(CONF_MOVING_TARGET_COUNT): sensor.sensor_schema(
-            icon=ICON_ACCOUNT_SWITCH,
         ),
     }
 )
