@@ -336,7 +336,7 @@ class FrameParser {
     }
 
     state_ = ParseState::READING_HEADER;
-    
+
     auto frame_type = buffer_[2];
     body_len_ = buffer_[2];  // Body length is the 3rd byte in type 1
 
